@@ -144,7 +144,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       "photo": ""
     };
 
-    final NetworkResponse response = await NetworkCaller.postRequest(
+    final NetworkResponse response = await NetworkCaller.registerRequest(
         url: Urls.registrationUrl, body: requestBody);
     _signUpInProgress = false;
     setState(() {});
