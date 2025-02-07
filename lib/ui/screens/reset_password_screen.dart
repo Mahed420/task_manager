@@ -44,6 +44,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     super.initState();
     getEmail();
   }
+
   bool _isChecking = false;
 
   @override
