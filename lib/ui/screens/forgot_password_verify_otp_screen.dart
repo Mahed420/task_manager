@@ -1,56 +1,25 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:task_manager/ui/controllers/auth_controller.dart';
-import 'package:task_manager/ui/screens/reset_password_screen.dart';
+import 'package:task_manager/ui/controllers/otp_verify_controller.dart';
 import 'package:task_manager/ui/screens/sign_in_screen.dart';
 import 'package:task_manager/ui/utils/app_colors.dart';
 import 'package:task_manager/ui/widgets/screen_background.dart';
 
-import '../../data/services/network_caller.dart';
-import '../../data/utils/urls.dart';
-import '../widgets/snack_bar_message.dart';
-
-class ForgotPasswordVerifyOtpScreen extends StatefulWidget {
+class ForgotPasswordVerifyOtpScreen extends StatelessWidget {
   ForgotPasswordVerifyOtpScreen({super.key});
 
   static const String name = '/forgot-password/verify-otp';
 
-  String? email;
-
-  @override
-  State<ForgotPasswordVerifyOtpScreen> createState() =>
-      _ForgotPasswordVerifyOtpScreenState();
-}
-
-class _ForgotPasswordVerifyOtpScreenState
-    extends State<ForgotPasswordVerifyOtpScreen> {
-  final TextEditingController _otpTEController = TextEditingController();
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  @override
-  void initState() {
-    super.initState();
-    getEmail();
-  }
-
-  Future<void> getEmail() async {
-    await Future.delayed(const Duration(seconds: 2));
-    String? l = await AuthController.getField('email');
-    widget.email = l;
-  }
-  bool isChecking = false;
+  final OtpVerifyController authController = Get.put(OtpVerifyController());
 
   @override
   Widget build(BuildContext context) {
-    TextTheme textTheme = Theme.of(context).textTheme;
 
-    if (widget.email != null) {
-      debugPrint('Mail isss: $widget.email');
-    } else {
-      debugPrint('No arguments or email not found.');
-    }
 
+    final Map<String, dynamic> args = Get.arguments ?? {};  // Handle null safely
+    final String email = args['email'] ?? '';               // Default to an empty string
 
 
     return Scaffold(
@@ -58,79 +27,44 @@ class _ForgotPasswordVerifyOtpScreenState
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 80),
-                  Text('PIN Verification', style: textTheme.titleLarge),
-                  const SizedBox(height: 4),
-                  Text(
-                    'A 6 digits of OTP has been sent to your email address',
-                    style: textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildPinCodeTextField(),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: isChecking
-                        ? null
-                        : () async {
-                            if (_otpTEController.text.isEmpty) {
-                              showSnackBarMessage(
-                                  context, 'Please enter email addres');
-                              return;
-                            }
-                            setState(() {
-                              isChecking = true;
-                            });
-
-                            debugPrint(
-                                'otp is: ${_otpTEController.text.trim()}');
-
-                            NetworkResponse response =
-                                await NetworkCaller.getRequest(
-                                    url:
-                                        '${Urls.recoverVerifyOTPUrl}/${widget.email}/${_otpTEController.text.trim()}');
-
-                            if (response.isSuccess) {
-                              Map<String, dynamic>? responseData =
-                                  response.responseData;
-                              if (responseData?['status'] == "fail") {
-                                showSnackBarMessage(
-                                    context, 'Error: ${responseData?['data']}');
-                              } else {
-                                AuthController.saveField(
-                                    'otp', _otpTEController.text.trim());
-                                Navigator.pushNamed(
-                                    context, ResetPasswordScreen.name);
-                              }
-                            } else {
-                              showSnackBarMessage(
-                                  context, 'Error: ${response.errorMessage}');
-                            }
-                            setState(() {
-                              isChecking = false;
-                            });
-                          },
-                    child: isChecking
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.0,
-                            ),
-                          )
-                        : const Icon(Icons.arrow_circle_right_outlined),
-                  ),
-                  const SizedBox(height: 48),
-                  Center(
-                    child: _buildSignInSection(),
-                  )
-                ],
-              ),
+            child: GetBuilder<OtpVerifyController>(
+              builder: (controller) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 80),
+                    Text('PIN Verification',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 4),
+                    Text(
+                      'A 6-digit OTP has been sent to your email address',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 24),
+                    _buildPinCodeTextField(controller),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: controller.isChecking.value
+                          ? null
+                          : () {
+                              controller.verifyOtp(email);
+                            },
+                      child: controller.isChecking.value
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.0,
+                              ),
+                            )
+                          : const Icon(Icons.arrow_circle_right_outlined),
+                    ),
+                    const SizedBox(height: 48),
+                    Center(child: _buildSignInSection()),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -138,7 +72,7 @@ class _ForgotPasswordVerifyOtpScreenState
     );
   }
 
-  Widget _buildPinCodeTextField() {
+  Widget _buildPinCodeTextField(OtpVerifyController controller) {
     return PinCodeTextField(
       length: 6,
       animationType: AnimationType.fade,
@@ -155,8 +89,8 @@ class _ForgotPasswordVerifyOtpScreenState
       animationDuration: const Duration(milliseconds: 300),
       backgroundColor: Colors.transparent,
       enableActiveFill: true,
-      controller: _otpTEController,
-      appContext: context,
+      controller: controller.otpController,
+      appContext: Get.context!,
     );
   }
 
@@ -174,18 +108,11 @@ class _ForgotPasswordVerifyOtpScreenState
             ),
             recognizer: TapGestureRecognizer()
               ..onTap = () {
-                Navigator.pushNamedAndRemoveUntil(
-                    context, SignInScreen.name, (value) => false);
+                Get.offAllNamed(SignInScreen.name);
               },
           )
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _otpTEController.dispose();
-    super.dispose();
   }
 }

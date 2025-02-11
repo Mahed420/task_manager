@@ -1,8 +1,7 @@
 import 'dart:convert';
-
 import 'package:flutter/cupertino.dart';
-import 'package:http/http.dart';
-import 'package:task_manager/app.dart';
+import 'package:get/get.dart';
+import 'package:http/http.dart' as http; // ✅ Alias added here
 import 'package:task_manager/ui/controllers/auth_controller.dart';
 import 'package:task_manager/ui/screens/sign_in_screen.dart';
 
@@ -25,23 +24,30 @@ class NetworkCaller {
     try {
       Uri uri = Uri.parse(url);
       debugPrint('URL => $url');
-      Response response =
-          await get(uri, headers: {'token': AuthController.accessToken ?? ''});
+      http.Response response = await http.get(  // ✅ Updated
+        uri,
+        headers: {'token': AuthController.accessToken ?? ''},
+      );
       debugPrint('Response Code => ${response.statusCode}');
       debugPrint('Response Data => ${response.body}');
       if (response.statusCode == 200) {
         final decodedResponse = jsonDecode(response.body);
         return NetworkResponse(
-            isSuccess: true,
-            statusCode: response.statusCode,
-            responseData: decodedResponse);
+          isSuccess: true,
+          statusCode: response.statusCode,
+          responseData: decodedResponse,
+        );
       } else if (response.statusCode == 401) {
         await _logout();
         return NetworkResponse(
-            isSuccess: false, statusCode: response.statusCode);
+          isSuccess: false,
+          statusCode: response.statusCode,
+        );
       } else {
         return NetworkResponse(
-            isSuccess: false, statusCode: response.statusCode);
+          isSuccess: false,
+          statusCode: response.statusCode,
+        );
       }
     } catch (e) {
       return NetworkResponse(
@@ -52,33 +58,42 @@ class NetworkCaller {
     }
   }
 
-  static Future<NetworkResponse> postRequest(
-      {required String url, Map<String, dynamic>? body}) async {
+  static Future<NetworkResponse> postRequest({
+    required String url,
+    Map<String, dynamic>? body,
+  }) async {
     try {
       Uri uri = Uri.parse(url);
       debugPrint('URL => $url');
       debugPrint('BODY => $body');
-      Response response = await post(uri,
-          headers: {
-            'content-type': 'application/json',
-            'token': AuthController.accessToken ?? ''
-          },
-          body: jsonEncode(body));
+      http.Response response = await http.post(  // ✅ Updated
+        uri,
+        headers: {
+          'content-type': 'application/json',
+          'token': AuthController.accessToken ?? '',
+        },
+        body: jsonEncode(body),
+      );
       debugPrint('Response Code => ${response.statusCode}');
       debugPrint('Response Data => ${response.body}');
       if (response.statusCode == 200) {
         final decodedResponse = jsonDecode(response.body);
         return NetworkResponse(
-            isSuccess: true,
-            statusCode: response.statusCode,
-            responseData: decodedResponse);
+          isSuccess: true,
+          statusCode: response.statusCode,
+          responseData: decodedResponse,
+        );
       } else if (response.statusCode == 401) {
         await _logout();
         return NetworkResponse(
-            isSuccess: false, statusCode: response.statusCode);
+          isSuccess: false,
+          statusCode: response.statusCode,
+        );
       } else {
         return NetworkResponse(
-            isSuccess: false, statusCode: response.statusCode);
+          isSuccess: false,
+          statusCode: response.statusCode,
+        );
       }
     } catch (e) {
       return NetworkResponse(
@@ -88,6 +103,7 @@ class NetworkCaller {
       );
     }
   }
+
 
   static Future<NetworkResponse> registerRequest(
       {required String url, Map<String, dynamic>? body}) async {
@@ -95,7 +111,7 @@ class NetworkCaller {
       Uri uri = Uri.parse(url);
       debugPrint('URL => $url');
       debugPrint('BODY => $body');
-      Response response = await post(uri,
+      http.Response response = await http.post(uri,
           headers: {
             'content-type': 'application/json',
           },
@@ -127,9 +143,10 @@ class NetworkCaller {
 
   static Future<void> _logout() async {
     await AuthController.clearUserData();
-    Navigator.pushNamedAndRemoveUntil(
-        TaskManagerApp.navigatorKey.currentContext!,
-        SignInScreen.name,
-        (_) => false);
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (Get.currentRoute != SignInScreen.name) {
+        Get.offAllNamed(SignInScreen.name);
+      }
+    });
   }
 }
